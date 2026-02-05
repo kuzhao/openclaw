@@ -119,12 +119,12 @@ async function getAzureAccessToken(_params: {
   deploymentName?: string;
 }): Promise<{ token: string; expires: number }> {
   const credential = new DefaultAzureCredential();
-  
+
   // Azure OpenAI uses the cognitive services scope
   const scope = "https://cognitiveservices.azure.com/.default";
-  
+
   const tokenResponse = await credential.getToken(scope);
-  
+
   return {
     token: tokenResponse.token,
     expires: tokenResponse.expiresOnTimestamp,

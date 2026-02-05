@@ -19,6 +19,7 @@ openclaw models auth login --provider azure-openai --method api-key
 ```
 
 You'll be prompted for:
+
 - Azure OpenAI endpoint URL (e.g., `https://your-resource-name.openai.azure.com`)
 - Deployment name (optional)
 - API key
@@ -30,6 +31,7 @@ openclaw models auth login --provider azure-openai --method keyless
 ```
 
 This method uses Azure's `DefaultAzureCredential` which supports:
+
 - Azure CLI (`az login`)
 - Service principal (environment variables)
 - Managed identity (when running on Azure)
@@ -80,7 +82,7 @@ After authentication, your config will look like:
       "azure-openai": {
         baseUrl: "https://your-resource-name.openai.azure.com/openai/deployments/gpt-4o",
         api: "openai-completions",
-        apiKey: "AZURE_OPENAI_API_KEY",  // or managed via auth profiles
+        apiKey: "AZURE_OPENAI_API_KEY", // or managed via auth profiles
         models: [
           {
             id: "gpt-4o",
@@ -168,11 +170,13 @@ If you have multiple deployments, you can configure them in `models.json`:
 ### "Authentication failed"
 
 **For keyless auth:**
+
 1. Verify you're logged in: `az account show`
 2. Check your identity has the correct role assignment
 3. Ensure environment variables are set (if using service principal)
 
 **For API key auth:**
+
 1. Verify your API key is valid
 2. Check the endpoint URL is correct
 3. Ensure the deployment exists
@@ -186,6 +190,7 @@ If you have multiple deployments, you can configure them in `models.json`:
 ### Token Refresh Issues
 
 Keyless authentication tokens are automatically refreshed. If you encounter issues:
+
 1. Re-run `openclaw models auth login --provider azure-openai --method keyless`
 2. Check Azure AD token lifetime settings
 3. Verify network connectivity to Azure AD

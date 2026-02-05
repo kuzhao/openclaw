@@ -27,6 +27,7 @@ openclaw models auth login --provider azure-openai --method api-key
 ```
 
 You'll be prompted for:
+
 - Azure OpenAI endpoint URL (e.g., `https://your-resource-name.openai.azure.com`)
 - Deployment name (optional)
 - API key
@@ -40,10 +41,12 @@ openclaw models auth login --provider azure-openai --method keyless
 ```
 
 You'll be prompted for:
+
 - Azure OpenAI endpoint URL
 - Deployment name (optional)
 
 The plugin will automatically use credentials from:
+
 1. Environment variables (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`)
 2. Azure CLI (`az login`)
 3. Managed identity (if running on Azure)
@@ -53,11 +56,13 @@ The plugin will automatically use credentials from:
 ### Environment Variables
 
 #### For API Key Authentication:
+
 - `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key
 - `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI endpoint URL
 - `AZURE_OPENAI_DEPLOYMENT_NAME`: Default deployment name
 
 #### For Keyless Authentication:
+
 - `AZURE_CLIENT_ID`: Service principal client ID
 - `AZURE_CLIENT_SECRET`: Service principal client secret
 - `AZURE_TENANT_ID`: Azure AD tenant ID

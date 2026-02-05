@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
 import type { ProviderPlugin } from "openclaw/plugin-sdk";
+import { describe, it, expect, vi } from "vitest";
 
 describe("Azure OpenAI Plugin", () => {
   it("should export a valid plugin definition", async () => {
