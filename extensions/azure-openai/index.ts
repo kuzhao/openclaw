@@ -278,10 +278,7 @@ const azureOpenAiPlugin = {
               const profileId = `azure-openai:${new URL(endpointUrl).hostname}`;
 
               // Build base URL with deployment if provided
-              let baseUrl = endpointUrl;
-              if (deploymentNameStr) {
-                baseUrl = `${endpointUrl}/openai/deployments/${deploymentNameStr}`;
-              }
+              let baseUrl = `${endpointUrl}/openai/v1`;
 
               return {
                 profiles: [

@@ -89,6 +89,132 @@ import { splitSdkTools } from "../tool-split.js";
 import { describeUnknownError, mapThinkingLevel } from "../utils.js";
 import { detectAndLoadPromptImages } from "./images.js";
 
+const MAX_LLM_LOG_BODY_CHARS = 20_000;
+
+const truncateLogBody = (value: string | undefined): string | undefined => {
+  if (!value) {
+    return value;
+  }
+  if (value.length <= MAX_LLM_LOG_BODY_CHARS) {
+    return value;
+  }
+  return `${value.slice(0, MAX_LLM_LOG_BODY_CHARS)}…(truncated)`;
+};
+
+const formatReadableError = (err: unknown): string => {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === "string") {
+    return err;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+};
+
+const tryReadBodyInit = async (body: BodyInit | null | undefined): Promise<string | undefined> => {
+  if (body == null) {
+    return undefined;
+  }
+  if (typeof body === "string") {
+    return body;
+  }
+  if (body instanceof URLSearchParams) {
+    return body.toString();
+  }
+  if (typeof Blob !== "undefined" && body instanceof Blob) {
+    return await body.text();
+  }
+  if (body instanceof ArrayBuffer) {
+    return Buffer.from(body).toString("utf8");
+  }
+  if (body instanceof Uint8Array) {
+    return Buffer.from(body).toString("utf8");
+  }
+  if (typeof ReadableStream !== "undefined" && body instanceof ReadableStream) {
+    return "[ReadableStream]";
+  }
+  try {
+    return JSON.stringify(body);
+  } catch {
+    return String(body);
+  }
+};
+
+const tryReadRequestBody = async (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<string | undefined> => {
+  const initBody = await tryReadBodyInit(init?.body ?? null);
+  if (initBody !== undefined) {
+    return initBody;
+  }
+  if (typeof Request !== "undefined" && input instanceof Request) {
+    try {
+      return await input.clone().text();
+    } catch (err) {
+      return `[unreadable request body: ${formatReadableError(err)}]`;
+    }
+  }
+  return undefined;
+};
+
+const tryReadResponseBody = async (response: Response): Promise<string> => {
+  try {
+    return await response.clone().text();
+  } catch (err) {
+    return `[unreadable response body: ${formatReadableError(err)}]`;
+  }
+};
+
+const withLlmRequestDebug = async <T>(
+  params: { provider: string; modelId: string },
+  task: () => Promise<T>,
+): Promise<T> => {
+  const originalFetch = globalThis.fetch;
+  if (!originalFetch) {
+    return task();
+  }
+  let requestIndex = 0;
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const endpoint =
+      typeof input === "string"
+        ? input
+        : typeof Request !== "undefined" && input instanceof Request
+          ? input.url
+          : String(input);
+    const method =
+      init?.method ??
+      (typeof Request !== "undefined" && input instanceof Request ? input.method : "GET");
+    const requestBody = truncateLogBody(await tryReadRequestBody(input, init));
+    const requestBodyLabel = requestBody ?? "<empty>";
+    const requestId = ++requestIndex;
+
+    log.debug(
+      `[llm-request] id=${requestId} provider=${params.provider} model=${params.modelId} endpoint=${endpoint} method=${method} body=${requestBodyLabel}`,
+    );
+
+    const response = await originalFetch(input, init);
+    const responseBody = truncateLogBody(await tryReadResponseBody(response));
+    const responseBodyLabel = responseBody ?? "<empty>";
+
+    log.debug(
+      `[llm-response] id=${requestId} provider=${params.provider} model=${params.modelId} endpoint=${endpoint} status=${response.status} body=${responseBodyLabel}`,
+    );
+
+    return response;
+  };
+
+  try {
+    return await task();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+};
+
 export function injectHistoryImagesIntoMessages(
   messages: AgentMessage[],
   historyImagesByIndex: Map<number, ImageContent[]>,
@@ -814,10 +940,15 @@ export async function runEmbeddedAttempt(
 
           // Only pass images option if there are actually images to pass
           // This avoids potential issues with models that don't expect the images parameter
+          const runWithLlmDebug = <T>(task: () => Promise<T>) =>
+            withLlmRequestDebug({ provider: params.provider, modelId: params.modelId }, task);
+
           if (imageResult.images.length > 0) {
-            await abortable(activeSession.prompt(effectivePrompt, { images: imageResult.images }));
+            await runWithLlmDebug(() =>
+              abortable(activeSession.prompt(effectivePrompt, { images: imageResult.images })),
+            );
           } else {
-            await abortable(activeSession.prompt(effectivePrompt));
+            await runWithLlmDebug(() => abortable(activeSession.prompt(effectivePrompt)));
           }
         } catch (err) {
           promptError = err;
