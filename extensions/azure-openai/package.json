@@ -7,9 +7,6 @@
   "dependencies": {
     "@azure/identity": "^4.6.0"
   },
-  "devDependencies": {
-    "openclaw": "workspace:*"
-  },
   "openclaw": {
     "extensions": [
       "./index.ts"
